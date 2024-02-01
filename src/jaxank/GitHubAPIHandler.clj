@@ -6,8 +6,8 @@
   nil)
 
 (defn mock-fetch-latest-version [repo]
-  (let [mock-responses {"jaxank/crazy-cool-plugin" {:mvm/version "v0.2.0"}
-                        "jaxank/magic-lib" {:mvm/version "v0.2.1"}}
+  (let [mock-responses {"jaxank/crazy-cool-plugin" {:mvn/version "v0.2.0"}
+                        "jaxank/magic-lib" {:mvn/version "v0.2.1"}}
         response (get mock-responses repo)]
     (when response
-      (:mvm/version response))))
+      (:mvn/version response))))

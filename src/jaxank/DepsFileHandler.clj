@@ -25,19 +25,20 @@
 
 (defn update-deps-file [namespace-prefix]
   (let [deps-file-path "./__mocks__/mockDeps.edn"
-        namespace-prefix (ensure-ends-with namespace-prefix "/")
+        namespace-prefix (if (str/ends-with? namespace-prefix "/")
+                           namespace-prefix
+                           (str namespace-prefix "/"))
         deps-data (read-deps-file deps-file-path)
         matched-deps (find-dependencies deps-data namespace-prefix)]
     (if (empty? matched-deps)
       (println (str "No dependencies found for namespace prefix: " namespace-prefix))
-      (let [updated-deps (reduce (fn [acc [k v]]
-                                   (let [version-key (keyword (namespace k) "version")
-                                         new-version (github/mock-fetch-latest-version (name k))]
-                                     (assoc-in acc [k :mvn version-key] new-version)))
+      (let [updated-deps (reduce (fn [acc [k _]]
+                                   (let [dependency-name (str k) ; Already includes the namespace
+                                         new-version (github/mock-fetch-latest-version dependency-name)]
+                                     (println "Updating version for" k "to" new-version)
+                                     (assoc-in acc [k :mvn/version] new-version)))
                                  (get deps-data :deps) matched-deps)]
         (spit deps-file-path (prn-str (assoc deps-data :deps updated-deps)))
         (println "Dependencies updated")))))
-
-
 
 (update-deps-file "jaxank")
