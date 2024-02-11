@@ -1,44 +1,53 @@
 (ns jaxank.DepsFileHandler
-  (:require [clojure.edn :as edn]
-            [clojure.java.io :as io]
+  (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [jaxank.GitHubAPIHandler :as github]))
 
-;; name-space like jaxank NEEDS to have a "/" apparently
+;; ------- File Altercation -------
+(defn read-deps-file-content [filename]
+  (slurp filename))
+
+(defn write-deps-file-content [filename content]
+  (spit filename content))
+
+;; ------- Basic Utility -------
 (defn ensure-ends-with [s suffix]
-  (if (str/ends-with? s suffix) 
-    s 
+  (if (str/ends-with? s suffix)
+    s
     (str s suffix)))
 
-(defn read-deps-file [filename]
-  (with-open [rdr (io/reader filename)]
-    (let [data (edn/read (java.io.PushbackReader. rdr))]
-      data)))
+;; ------- User Feedback -------
+(defn printCheck [dep-name previous-version new-version]
+  (let [pattern (re-pattern "[0-9.]")
+        previous-formatted (str "v" (str/join (re-seq pattern previous-version)))]
+    (if (= previous-formatted new-version)
+      (println dep-name "is already up to date")
+      (println "Updated" dep-name "from" previous-formatted "to" new-version))))
 
-(defn find-dependencies [deps-data namespace-prefix]
-  (let [deps (get deps-data :deps)
-        namespace-prefix (clojure.string/lower-case namespace-prefix)]
-    (filter (fn [[k _]]
-              (let [full-key-str (clojure.string/lower-case  (str k))]
-                (str/starts-with? full-key-str namespace-prefix)))
-            deps)))
+;; ------- Rewriting Content -------
+(defn update-version-in-content [content namespace-prefix]
+  (let [deps-pattern (re-pattern "[a-zA-Z0-9/-]+\\s+\\{:mvn/version\\s+\"[0-9.]+\"")
+        deps-matches (re-seq deps-pattern content)]
+    (reduce (fn [acc dep-match]
+              (let [dep-name (first (re-find (re-pattern "([a-zA-Z0-9/-]+)") dep-match))]
+                (if (str/starts-with? dep-name namespace-prefix)
+                  (let [fetched-version (github/mock-fetch-latest-version dep-name)
+                        new-version (if (str/starts-with? fetched-version "v")
+                                      (subs fetched-version 1)  ; Strip "v" if present
+                                      fetched-version)
+                        updated-match (str/replace dep-match #":mvn/version\s+\"[^\"]+\"" (str ":mvn/version \"" new-version "\""))]
+                    (printCheck dep-name dep-match fetched-version)
+                    (str/replace acc dep-match updated-match))
+                  acc)))
+            content
+            deps-matches)))
 
-(defn update-deps-file [namespace-prefix]
-  (let [deps-file-path "./__mocks__/mockDeps.edn"
-        namespace-prefix (if (str/ends-with? namespace-prefix "/")
-                           namespace-prefix
-                           (str namespace-prefix "/"))
-        deps-data (read-deps-file deps-file-path)
-        matched-deps (find-dependencies deps-data namespace-prefix)]
-    (if (empty? matched-deps)
-      (println (str "No dependencies found for namespace prefix: " namespace-prefix))
-      (let [updated-deps (reduce (fn [acc [k _]]
-                                   (let [dependency-name (str k) ; Already includes the namespace
-                                         new-version (github/mock-fetch-latest-version dependency-name)]
-                                     (println "Updating version for" k "to" new-version)
-                                     (assoc-in acc [k :mvn/version] new-version)))
-                                 (get deps-data :deps) matched-deps)]
-        (spit deps-file-path (prn-str (assoc deps-data :deps updated-deps)))
-        (println "Dependencies updated")))))
+;; ------- Update Deps -------
+(defn update-deps-file [filename namespace-prefix]
+  (let [content (read-deps-file-content filename)
+        updated-content (update-version-in-content content (ensure-ends-with namespace-prefix "/"))]
+    (write-deps-file-content filename updated-content)
+    (println namespace-prefix "dependencies updated in" filename)))
 
-(update-deps-file "jaxank")
+;; ------- Testing here for now -------
+(update-deps-file "./__mocks__/mockDeps.edn" "jaxank")
