@@ -11,13 +11,12 @@
       (:mvn/version response))))
 
 (defn get-owner-repo
-  "Dependency: owner/name {:mvn/version 'version number'}"
+  "Gets `owner/repo` from a dependency string."
   [full-dependency]
-  (let [split-string (first (clojure.string/split full-dependency #" "))]
-    split-string))
+  (first (clojure.string/split full-dependency #" ")))
 
 (defn fetch-latest-version
-  "Fetches the latest version of a GitHub repository based on a dependency string."
+  "Fetches the latest release version of a GitHub repository based on a dependency string."
   [repo]
   (let [url (str "https://api.github.com/repos/" (get-owner-repo repo) "/releases/latest")
         response (client/get url {:headers {"Authorization" (str "Bearer " (System/getenv "GITHUB_TOKEN"))}

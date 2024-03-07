@@ -2,6 +2,7 @@
  :deps {org.clojure/clojure {:mvn/version "1.11.1"}
         net.mikera/core.matrix {:mvn/version "0.63.0"}
         jaxank/crazy-cool-plugin {:mvn/version "0.0.9"}
+        xadvent/test {:mvn/version "0.0.1"} ; Should be v0.1.0 after running
         org.clojure/math.numeric-tower {:mvn/version "0.0.5"}
         net.mikera/vectorz-clj {:mvn/version "0.48.0"} 
         neovim/neovim {:mvn/version "0.0.1"} ; Added real dependency for testing
