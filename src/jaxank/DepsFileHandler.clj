@@ -2,6 +2,7 @@
   (:require [clojure.string :as str]
             [jaxank.GitHubAPIHandler :as gh]))
 
+
 ;; ------- Basic Utility -------
 (defn ensure-str-ends-with [s suffix]
   (if (str/ends-with? s suffix)
@@ -67,8 +68,7 @@
   [filename namespace-prefix]
   (let [content (slurp filename)
         updated-content (update-version-in-content content namespace-prefix)]
-    (spit filename updated-content)
-    (println namespace-prefix "dependencies updated in" filename)))
+    (spit filename updated-content)))
 
 ;; ------- Testing here for now -------
 (update-deps-file "./__mocks__/mockDeps.edn" "NeOviM")

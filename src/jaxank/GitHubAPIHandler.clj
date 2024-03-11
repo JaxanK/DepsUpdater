@@ -3,6 +3,7 @@
             [clj-http.client :as client]
             [cheshire.core :as json]))
 
+
 (defn mock-fetch-latest-version [repo]
   (let [mock-responses {"jaxank/crazy-cool-plugin" {:mvn/version "v0.2.0"}
                         "jaxank/magic-lib" {:mvn/version "v0.2.1"}}
