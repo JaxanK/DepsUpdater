@@ -17,8 +17,8 @@
         previous-formatted (str/join (re-seq pattern previous-version))
         new-formatted      (str/join (re-seq pattern new-version))]
     (if (= previous-formatted new-version)
-      (println dep-name "is already up to date")
-      (println "Updated" dep-name "from" previous-formatted "to" new-version))))
+      (str dep-name " is already up to date")
+      (str "Updated " dep-name " from " previous-formatted " to " new-version))))
 
 ;; ------- Dependency Parsing -------
 (defn parse-deps
@@ -27,9 +27,8 @@
   (let [deps-pattern #"[a-zA-Z0-9/-]+\s+\{:mvn/version\s+\"[0-9.]+\""]
     (->> (re-seq deps-pattern content)
          (map #(let [dep-name     (first (re-find #"([a-zA-Z0-9/-]+)" %))
-                     original-str (first (re-find #":mvn/version\s+\"[^\"]+\"" %)) ;; "{mvn/version: [num]"
                      dep-ver-str %]
-                 {:dep-name (str/lower-case dep-name) :dep-ver-str dep-ver-str :original-str original-str}))
+                 {:dep-name (str/lower-case dep-name) :dep-ver-str dep-ver-str}))
          (filter #(str/starts-with? (str/lower-case (:dep-name %)) (str/lower-case namespace-prefix))))))
 
 ;; ------- Version Update -------
@@ -59,7 +58,7 @@
   (let [namespace-prefix (ensure-str-ends-with namespace-prefix "/")
         parsed-deps  (parse-deps content namespace-prefix)
         updated-deps (map update-dep-version parsed-deps)]
-    (doseq [{:keys [dep-name dep-ver-str new-version]} updated-deps] (print-update-status (str dep-name) (str dep-ver-str) (str new-version)))
+    (doseq [{:keys [dep-name dep-ver-str new-version]} updated-deps] (println (print-update-status (str dep-name) (str dep-ver-str) (str new-version))))
     (apply-updates content updated-deps)))
 
 ;; ------- Update Deps -------

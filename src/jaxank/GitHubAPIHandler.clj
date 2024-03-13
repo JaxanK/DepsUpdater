@@ -17,14 +17,13 @@
   (first (clojure.string/split full-dependency #" ")))
 
 (defn fetch-latest-version
-  "Fetches the latest release version of a GitHub repository based on a dependency string."
+  "Fetches the latest release version of a GitHub repository."
   [repo]
   (let [url (str "https://api.github.com/repos/" (get-owner-repo repo) "/releases/latest")
-        response (client/get url {:headers {"Authorization" (str "Bearer " (System/getenv "GITHUB_TOKEN"))}
-                                  :as :json})]
+        response (client/get url {:as :json})] ;; Removed the Authorization header for unauthenticated requests
     (if (= 200 (:status response))
       (-> response :body :tag_name)
       (println "Failed to fetch latest version for" repo "with status code" (:status response)))))
 
-; NOTE: This requires a system env variable named "GITHUB_TOKEN"
-(fetch-latest-version "neovim/neovim {:mvn/version '0.0.1'}") 
+
+;; (fetch-latest-version "neovim/neovim {:mvn/version '0.0.1'}") 
