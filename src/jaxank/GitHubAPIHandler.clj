@@ -4,13 +4,6 @@
             [cheshire.core :as json]))
 
 
-(defn mock-fetch-latest-version [repo]
-  (let [mock-responses {"jaxank/crazy-cool-plugin" {:mvn/version "v0.2.0"}
-                        "jaxank/magic-lib" {:mvn/version "v0.2.1"}}
-        response (get mock-responses repo)]
-    (when response
-      (:mvn/version response))))
-
 (defn get-owner-repo
   "Gets `owner/repo` from a dependency string."
   [full-dependency]
@@ -25,5 +18,3 @@
       (-> response :body :tag_name)
       (println "Failed to fetch latest version for" repo "with status code" (:status response)))))
 
-
-;; (fetch-latest-version "neovim/neovim {:mvn/version '0.0.1'}") 
