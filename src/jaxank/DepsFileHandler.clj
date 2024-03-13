@@ -68,7 +68,3 @@
   (let [content (slurp filename)
         updated-content (update-version-in-content content namespace-prefix)]
     (spit filename updated-content)))
-
-;; ------- Testing here for now -------
-(update-deps-file "./__mocks__/mockDeps.edn" "NeOviM")
-(update-deps-file "./__mocks__/mockDeps.edn" "xadvent")
