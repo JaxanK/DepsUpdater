@@ -3,41 +3,28 @@
             [jaxank.GitHubAPIHandler :as gh]))
 
 
-(defn ensure-str-ends-with [s suffix]
-  (if (str/ends-with? s suffix)
-    s
-    (str s suffix)))
-
 (defn find-all-deps
+  "Finds all Dependencies starting with \"io.github.\" matches until the next \"}\"."
   [content]
   (let [reg #"io\.github\.[^\}]+?\}"
         findings (re-seq reg content)]
     findings))
 
 (defn make-namespace-check
+  "Creates a Regex for matching the given namespace-prefix in a dependency string."
   [namespace-prefix]
   (let [prefix (re-pattern (str "io\\.github\\." (str/replace namespace-prefix #"\." "\\.")))]
     prefix))
 
-
 (defn parse-git-deps
-  "Parses git dependencies."
+  "Parses git dependencies and returns `full-name` and `sha`"
   [deps]
   (keep (fn [dep]
           (when-let [[_ full-name sha] (re-find #"(io\.github\.[^\s]+)\s+\{:git/sha\s+\"([^\"]+)\"" dep)]
             {:name full-name, :current-sha sha}))
         deps))
 
-
-(defn re-find-and-replace
-  "Finds and replaces a matched pattern in a string, scoped to a specific dependency name."
-  [content pattern dep-name replacement]
-  (re-seq pattern content (fn [match]
-                            (if (= (second match) dep-name)
-                              (replace match replacement)
-                              match))))
-
-(defn matches-namespace?
+(defn matches-namespace
   "Checks if the given dependency name matches the namespace prefix."
   [dep-name namespace-prefix]
   (re-matches (re-pattern (str "^io\\.github\\." (str/replace namespace-prefix #"\." "\\.") "\\b.*")) dep-name))
@@ -59,11 +46,13 @@
   [content namespace-prefix]
   (let [namespace-check (make-namespace-check namespace-prefix)
         all-deps (find-all-deps content)
-        filtered-deps (filter #(matches-namespace? (:name %) namespace-prefix) (parse-git-deps all-deps))]
+        filtered-deps (filter #(matches-namespace (:name %) namespace-prefix) (parse-git-deps all-deps))]
     (map (fn [{:keys [name current-sha]}] ;; Map to fetch new SHAs and prepare update info.
-           (if-let [new-sha (gh/fetch-latest-commit-sha name)]
+           (if-let [new-sha (subs (gh/fetch-latest-commit-sha name) 0 7)]
              {:name name :current-sha current-sha :new-sha new-sha}))
          filtered-deps)))
+
+
 
 (defn update-git-deps-in-file
   "Integrates steps to fetch new SHAs, apply updates, and rewrite deps.edn content."
@@ -72,7 +61,7 @@
         git-deps-updates (update-git-deps content namespace-prefix)
         updated-content (apply-git-sha-updates content git-deps-updates)] ;; Apply SHA updates.
     (spit filename updated-content) ;; Write the updated content back to the file.
-    (println "Updated git dependencies in" filename)))
+    (println "Updated git dependencies in" filename "for" namespace-prefix)))
 
 ;; ---- Testing ----
-(update-git-deps-in-file "./__mocks__/mockDeps.edn" "xadvent")
+; (update-git-deps-in-file "./__mocks__/mockDeps.edn" "xadvent")
