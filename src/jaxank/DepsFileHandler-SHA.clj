@@ -10,12 +10,6 @@
         findings (re-seq reg content)]
     findings))
 
-(defn make-namespace-check
-  "Creates a Regex for matching the given namespace-prefix in a dependency string."
-  [namespace-prefix]
-  (let [prefix (re-pattern (str "io\\.github\\." (str/replace namespace-prefix #"\." "\\.")))]
-    prefix))
-
 (defn parse-git-deps
   "Parses git dependencies and returns `full-name` and `sha`"
   [deps]
@@ -41,16 +35,37 @@
           content
           git-deps-matches))
 
+(defn process-dependency
+  "Attempts to update the SHA for a single dependency and provides feedback, including in case of errors."
+ [{:keys [name current-sha]}] 
+  (let [repo-name (-> name (str/replace "io.github." "") (str/split #"\s") (first))]   
+    (try
+      (let [new-sha-full (gh/fetch-latest-commit-sha name)
+            new-sha (if new-sha-full (subs new-sha-full 0 7))] ;; Shorten SHA strings for better readability.
+        (cond
+          (and new-sha (not= current-sha new-sha))
+          (do
+            (println "Updating" repo-name ": current SHA" current-sha "=> new SHA" new-sha)
+            {:name name :current-sha current-sha :new-sha new-sha})
+
+          :else
+          (do
+            (println repo-name "is already up to date with SHA" current-sha)
+            nil))) ;; Return nil if no update is needed.
+      (catch Exception e
+        (println "Error updating" repo-name ": " (.getMessage e))
+        nil)))) ;; Return nil on error.
+
+
 (defn update-git-deps
-  "Fetches new SHAs for git dependencies within a specific namespace, prepares updates."
+  "Fetches new SHAs for git dependencies within a specific namespace and prepares updates with feedback."
   [content namespace-prefix]
-  (let [namespace-check (make-namespace-check namespace-prefix)
-        all-deps (find-all-deps content)
-        filtered-deps (filter #(matches-namespace (:name %) namespace-prefix) (parse-git-deps all-deps))]
-    (map (fn [{:keys [name current-sha]}] ;; Map to fetch new SHAs and prepare update info.
-           (if-let [new-sha (subs (gh/fetch-latest-commit-sha name) 0 7)]
-             {:name name :current-sha current-sha :new-sha new-sha}))
-         filtered-deps)))
+  (let [all-deps (find-all-deps content)
+        parsed-deps (parse-git-deps all-deps)]
+    (->> parsed-deps
+         (filter #(matches-namespace (:name %) namespace-prefix))
+         (mapv #(process-dependency %)) ;; Mapv for eager evaluation.
+         (remove nil?)))) ;; Filter out nil entries representing no-update or errors.
 
 
 
@@ -63,5 +78,5 @@
     (spit filename updated-content) ;; Write the updated content back to the file.
     (println "Updated git dependencies in" filename "for" namespace-prefix)))
 
-;; ---- Testing ----
-; (update-git-deps-in-file "./__mocks__/mockDeps.edn" "xadvent")
+; ---- Testing ----
+;; (update-git-deps-in-file "./__mocks__/mockDeps.edn" "xadvent")
