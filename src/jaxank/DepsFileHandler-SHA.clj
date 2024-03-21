@@ -74,9 +74,5 @@
   [filename namespace-prefix]
   (let [content (slurp filename)
         git-deps-updates (update-git-deps content namespace-prefix)
-        updated-content (apply-git-sha-updates content git-deps-updates)] ;; Apply SHA updates.
-    (spit filename updated-content) ;; Write the updated content back to the file.
-    (println "Updated git dependencies in" filename "for" namespace-prefix)))
-
-; ---- Testing ----
-;; (update-git-deps-in-file "./__mocks__/mockDeps.edn" "xadvent")
+        updated-content (apply-git-sha-updates content git-deps-updates)]
+    (spit filename updated-content))) 
