@@ -40,8 +40,9 @@
  [{:keys [name current-sha]}] 
   (let [repo-name (-> name (str/replace "io.github." "") (str/split #"\s") (first))]   
     (try
-      (let [new-sha-full (gh/fetch-latest-commit-sha name)
-            new-sha (if new-sha-full (subs new-sha-full 0 7))] ;; Shorten SHA strings for better readability.
+      (let [new-sha (gh/fetch-latest-commit-sha name)
+            ;new-sha (if new-sha-full (subs new-sha-full 0 7))
+            ] ;; Shorten SHA strings for better readability.
         (cond
           (and new-sha (not= current-sha new-sha))
           (do
